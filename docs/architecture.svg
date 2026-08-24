@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 850" width="1240" height="850" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="pfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6779"/>
+    </marker>
+    <marker id="pfeil-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ee7b30"/>
+    </marker>
+    <marker id="pfeil-beide" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7d8ba3"/>
+    </marker>
+  </defs>
+
+  <rect width="1240" height="850" fill="#ffffff"/>
+
+  <!-- Titel -->
+  <text x="30" y="40" font-size="23" font-weight="700" fill="#14284b">MarTech Event Relay</text>
+  <text x="30" y="64" font-size="14.5" fill="#5b6779">Eine Konversion, zwei Wege, eine gemeinsame event_id. Der Browser meldet clientseitig, der Worker serverseitig.</text>
+
+  <!-- ================= Browser ================= -->
+  <rect x="30" y="215" width="272" height="250" rx="10" fill="#f7f9fc" stroke="#c9d3e2" stroke-width="1.5"/>
+  <rect x="30" y="215" width="272" height="38" rx="10" fill="#14284b"/>
+  <rect x="30" y="243" width="272" height="10" fill="#14284b"/>
+  <text x="46" y="241" font-size="15" font-weight="700" fill="#ffffff">Browser, Demoseite</text>
+
+  <text x="46" y="282" font-size="13.5" font-weight="700" fill="#14284b">1. Konversion ausgelöst</text>
+  <text x="46" y="303" font-size="12.5" fill="#5b6779">Formular abgeschickt</text>
+
+  <text x="46" y="332" font-size="13.5" font-weight="700" fill="#ee7b30">2. event_id erzeugen</text>
+  <text x="46" y="352" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#14284b">evt_&lt;uuid&gt;</text>
+  <text x="46" y="371" font-size="12.5" fill="#5b6779">Genau einmal pro Konversion</text>
+
+  <text x="46" y="400" font-size="13.5" font-weight="700" fill="#14284b">3. beide Wege auslösen</text>
+  <text x="46" y="420" font-size="12.5" fill="#5b6779">dataLayer.push und fetch,</text>
+  <text x="46" y="438" font-size="12.5" fill="#5b6779">mit derselben event_id</text>
+
+  <!-- ================= GTM ================= -->
+  <rect x="360" y="70" width="300" height="112" rx="10" fill="#f7f9fc" stroke="#c9d3e2" stroke-width="1.5"/>
+  <rect x="360" y="70" width="300" height="38" rx="10" fill="#14284b"/>
+  <rect x="360" y="98" width="300" height="10" fill="#14284b"/>
+  <text x="376" y="96" font-size="15" font-weight="700" fill="#ffffff">Google Tag Manager</text>
+  <text x="376" y="132" font-size="12.5" fill="#5b6779">Trigger: benutzerdefiniertes Ereignis</text>
+  <text x="376" y="152" font-size="12.5" fill="#5b6779">Tag: GA4 Ereignis</text>
+  <text x="376" y="171" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#ee7b30">demo_conversion</text>
+
+  <!-- ================= Worker ================= -->
+  <rect x="360" y="215" width="344" height="302" rx="10" fill="#fff8f2" stroke="#ee7b30" stroke-width="2"/>
+  <rect x="360" y="215" width="344" height="38" rx="10" fill="#ee7b30"/>
+  <rect x="360" y="243" width="344" height="10" fill="#ee7b30"/>
+  <text x="376" y="241" font-size="15" font-weight="700" fill="#ffffff">Cloudflare Worker</text>
+  <text x="600" y="241" font-size="12.5" font-family="ui-monospace, Menlo, monospace" fill="#ffe4cf">POST /collect</text>
+
+  <circle cx="386" cy="279" r="10" fill="#14284b"/><text x="386" y="284" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+  <text x="406" y="277" font-size="13" font-weight="700" fill="#14284b">Herkunft oder Signatur prüfen</text>
+  <text x="406" y="295" font-size="12" fill="#5b6779">Browser über Origin, Server über HMAC</text>
+
+  <circle cx="386" cy="323" r="10" fill="#14284b"/><text x="386" y="328" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+  <text x="406" y="321" font-size="13" font-weight="700" fill="#14284b">Schema streng prüfen</text>
+  <text x="406" y="339" font-size="12" fill="#5b6779">Unbekannte Felder werden abgelehnt</text>
+
+  <circle cx="386" cy="367" r="10" fill="#14284b"/><text x="386" y="372" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+  <text x="406" y="365" font-size="13" font-weight="700" fill="#14284b">Normalisieren und hashen</text>
+  <text x="406" y="383" font-size="12" fill="#5b6779">SHA-256, ab hier kein Klartext mehr</text>
+
+  <circle cx="386" cy="411" r="10" fill="#14284b"/><text x="386" y="416" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">4</text>
+  <text x="406" y="409" font-size="13" font-weight="700" fill="#14284b">Deduplizieren über KV</text>
+  <text x="406" y="427" font-size="12" fill="#5b6779">Bekannte event_id wird nicht weitergeleitet</text>
+
+  <circle cx="386" cy="455" r="10" fill="#14284b"/><text x="386" y="460" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">5</text>
+  <text x="406" y="453" font-size="13" font-weight="700" fill="#14284b">Parallel an beide Ziele</text>
+  <text x="406" y="471" font-size="12" fill="#5b6779">Ein langsames Ziel bremst das andere nicht</text>
+  <text x="406" y="493" font-size="12" fill="#b3261e">Fehlschlag geht in den Wiederholweg</text>
+
+  <!-- ================= KV ================= -->
+  <rect x="30" y="560" width="272" height="118" rx="10" fill="#f7f9fc" stroke="#c9d3e2" stroke-width="1.5"/>
+  <rect x="30" y="560" width="272" height="34" rx="10" fill="#24406e"/>
+  <rect x="30" y="584" width="272" height="10" fill="#24406e"/>
+  <text x="46" y="584" font-size="14" font-weight="700" fill="#ffffff">Workers KV</text>
+  <text x="46" y="618" font-size="12.5" fill="#5b6779">evt: Deduplizierung, 24 Stunden</text>
+  <text x="46" y="638" font-size="12.5" fill="#5b6779">env: gehashter Umschlag für Wiederholung</text>
+  <text x="46" y="658" font-size="12.5" fill="#5b6779">stat: ein Schlüssel je Ereignis, kein Zähler</text>
+
+  <!-- ================= GA4 ================= -->
+  <rect x="822" y="70" width="388" height="196" rx="10" fill="#f7f9fc" stroke="#c9d3e2" stroke-width="1.5"/>
+  <rect x="822" y="70" width="388" height="38" rx="10" fill="#14284b"/>
+  <rect x="822" y="98" width="388" height="10" fill="#14284b"/>
+  <text x="838" y="96" font-size="15" font-weight="700" fill="#ffffff">Google Analytics 4</text>
+
+  <text x="838" y="132" font-size="13" font-weight="700" fill="#14284b">Weg A, clientseitig</text>
+  <text x="838" y="151" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#5b6779">demo_conversion</text>
+
+  <text x="838" y="180" font-size="13" font-weight="700" fill="#14284b">Weg B, serverseitig</text>
+  <text x="838" y="199" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#5b6779">demo_conversion_server</text>
+
+  <line x1="838" y1="215" x2="1194" y2="215" stroke="#dde3ec" stroke-width="1"/>
+  <text x="838" y="236" font-size="12" fill="#8a5a12">GA4 dedupliziert nicht über event_id.</text>
+  <text x="838" y="254" font-size="12" fill="#8a5a12">Darum zwei Namen, ein gemeinsamer Parameter.</text>
+
+  <!-- ================= CAPI ================= -->
+  <rect x="822" y="330" width="388" height="164" rx="10" fill="#f7f9fc" stroke="#c9d3e2" stroke-width="1.5"/>
+  <rect x="822" y="330" width="388" height="38" rx="10" fill="#14284b"/>
+  <rect x="822" y="358" width="388" height="10" fill="#14284b"/>
+  <text x="838" y="356" font-size="15" font-weight="700" fill="#ffffff">Empfänger in CAPI-Form</text>
+
+  <text x="838" y="392" font-size="12.5" fill="#5b6779">Signatur pflicht, Identifikatoren nur als SHA-256</text>
+  <text x="838" y="412" font-size="12.5" fill="#5b6779">Dedup über event_id und event_name</text>
+  <text x="838" y="432" font-size="12.5" fill="#5b6779">Klartext wird abgewiesen, nicht verarbeitet</text>
+  <line x1="838" y1="448" x2="1194" y2="448" stroke="#dde3ec" stroke-width="1"/>
+  <text x="838" y="470" font-size="12" fill="#b3261e">Nachgebildet. Keine Verbindung zu Meta.</text>
+
+  <!-- ================= n8n ================= -->
+  <rect x="360" y="700" width="850" height="128" rx="10" fill="#f7f9fc" stroke="#c9d3e2" stroke-width="1.5"/>
+  <rect x="360" y="700" width="850" height="38" rx="10" fill="#24406e"/>
+  <rect x="360" y="728" width="850" height="10" fill="#24406e"/>
+  <text x="376" y="726" font-size="15" font-weight="700" fill="#ffffff">n8n</text>
+
+  <text x="376" y="762" font-size="13" font-weight="700" fill="#14284b">retry-failed-events</text>
+  <text x="376" y="781" font-size="12" fill="#5b6779">Webhook, dann 15, 30, 60 Sekunden Abstand,</text>
+  <text x="376" y="799" font-size="12" fill="#5b6779">signierter Aufruf von /replay, sonst Alarm</text>
+
+  <text x="800" y="762" font-size="13" font-weight="700" fill="#14284b">daily-summary</text>
+  <text x="800" y="781" font-size="12" fill="#5b6779">Täglich um acht, /stats abrufen,</text>
+  <text x="800" y="799" font-size="12" fill="#5b6779">Zustell- und Dublettenquote in ein Tabellenblatt</text>
+
+  <!-- ================= Pfeile ================= -->
+  <!-- Browser -> GTM -->
+  <path d="M 302 300 L 330 300 L 330 126 L 356 126" fill="none" stroke="#5b6779" stroke-width="1.8" marker-end="url(#pfeil)"/>
+  <text x="338" y="206" font-size="11.5" fill="#5b6779">dataLayer.push</text>
+
+  <!-- Browser -> Worker -->
+  <path d="M 302 366 L 356 366" fill="none" stroke="#ee7b30" stroke-width="2.2" marker-end="url(#pfeil-orange)"/>
+  <text x="312" y="357" font-size="11.5" font-weight="700" fill="#ee7b30">fetch</text>
+
+  <!-- GTM -> GA4 -->
+  <path d="M 660 126 L 818 126" fill="none" stroke="#5b6779" stroke-width="1.8" marker-end="url(#pfeil)"/>
+  <text x="668" y="118" font-size="11.5" fill="#5b6779">Weg A</text>
+
+  <!-- Worker -> GA4 -->
+  <path d="M 704 300 L 760 300 L 760 188 L 818 188" fill="none" stroke="#5b6779" stroke-width="1.8" marker-end="url(#pfeil)"/>
+  <text x="714" y="292" font-size="11.5" fill="#5b6779">Weg B</text>
+
+  <!-- Worker -> CAPI -->
+  <path d="M 704 420 L 760 420 L 760 400 L 818 400" fill="none" stroke="#5b6779" stroke-width="1.8" marker-end="url(#pfeil)"/>
+  <text x="710" y="444" font-size="11" fill="#5b6779">signiert, nur Hashes</text>
+
+  <!-- Worker <-> KV -->
+  <path d="M 358 452 L 320 452 L 320 600 L 306 600" fill="none" stroke="#7d8ba3" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#pfeil-beide)" marker-start="url(#pfeil-beide)"/>
+  <text x="182" y="540" font-size="11.5" fill="#7d8ba3" text-anchor="middle">lesen und schreiben</text>
+
+  <!-- Worker -> n8n -->
+  <path d="M 470 519 L 470 696" fill="none" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#pfeil)"/>
+  <text x="478" y="580" font-size="11.5" fill="#b3261e">Fehlschlag: Ticket</text>
+  <text x="478" y="597" font-size="11.5" fill="#b3261e">mit event_id, Ziel</text>
+
+  <!-- n8n -> Worker (replay) -->
+  <path d="M 600 696 L 600 519" fill="none" stroke="#5b6779" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#pfeil)"/>
+  <text x="612" y="580" font-size="11.5" fill="#5b6779">signiert</text>
+  <text x="612" y="597" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#5b6779">POST /replay</text>
+
+  <!-- n8n daily -> Worker stats -->
+  <path d="M 900 696 L 900 540 L 730 540 L 730 519" fill="none" stroke="#7d8ba3" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#pfeil-beide)"/>
+  <text x="912" y="640" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#7d8ba3">GET /stats</text>
+
+  <!-- Legende -->
+  <line x1="30" y1="712" x2="66" y2="712" stroke="#ee7b30" stroke-width="2.2"/>
+  <text x="76" y="716" font-size="12" fill="#5b6779">Ereignisweg</text>
+  <line x1="30" y1="738" x2="66" y2="738" stroke="#7d8ba3" stroke-width="1.8" stroke-dasharray="5 4"/>
+  <text x="76" y="742" font-size="12" fill="#5b6779">Speicher und Betrieb</text>
+  <line x1="30" y1="764" x2="66" y2="764" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="5 4"/>
+  <text x="76" y="768" font-size="12" fill="#5b6779">Fehlerweg</text>
+  <text x="30" y="800" font-size="11.5" fill="#8a94a6">Talha Zengin, 2026. Quelltext unter</text>
+  <text x="30" y="817" font-size="11.5" fill="#8a94a6">github.com/talhaznn/martech-event-relay</text>
+</svg>

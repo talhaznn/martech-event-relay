@@ -1,0 +1,263 @@
+{
+  "id": "relayDaily000001",
+  "name": "relay – daily-summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000001",
+      "name": "Jeden Morgen um acht",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "relay_basis",
+              "value": "https://martech-event-relay.DEIN-SUBDOMAIN.workers.dev",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000002",
+      "name": "Einstellungen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -140,
+        300
+      ],
+      "notes": "Die einzige Stelle in diesem Workflow, die von Konto zu Konto verschieden ist."
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.relay_basis }}/stats?days=1",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000003",
+      "name": "Zähler holen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aus den Rohzählern des Relays wird eine Zeile, die ein Mensch in drei Sekunden liest.\nconst daten = $json;\nconst heute = daten.days?.[0] ?? { day: 'unbekannt', counts: {}, total: 0 };\nconst z = heute.counts ?? {};\n\nconst angenommen = z['relay.accepted'] ?? 0;\nconst duplikate  = z['relay.duplicate'] ?? 0;\nconst ga4Gesendet   = z['ga4.sent'] ?? 0;\nconst ga4Fehler     = z['ga4.failed'] ?? 0;\nconst capiGesendet  = z['capi.sent'] ?? 0;\nconst capiFehler    = z['capi.failed'] ?? 0;\nconst übersprungen = (z['ga4.skipped'] ?? 0) + (z['capi.skipped'] ?? 0);\n\nconst fehlerGesamt = ga4Fehler + capiFehler;\n\n// Die Zustellquote bezieht sich auf die Zustellversuche, nicht auf alle Ereignisse. Ein Ziel, das\n// wegen fehlender Einwilligung oder fehlender Einrichtung bewusst übersprungen wurde, ist kein\n// Fehlschlag und darf die Quote nicht nach unten ziehen.\nconst versucht = ga4Gesendet + ga4Fehler + capiGesendet + capiFehler;\nconst zustellquote = versucht > 0\n  ? Math.round(((ga4Gesendet + capiGesendet) / versucht) * 100)\n  : 100;\n\n// Die Dublettenquote ist die eigentlich interessante Zahl. Steigt sie plötzlich, stimmt etwas\n// mit dem Tag-Aufbau nicht, zum Beispiel ein Tag, der zweimal feuert.\nconst dublettenquote = (angenommen + duplikate) > 0\n  ? Math.round((duplikate / (angenommen + duplikate)) * 100)\n  : 0;\n\nreturn [{\n  json: {\n    tag: heute.day,\n    angenommen,\n    duplikate,\n    dublettenquote_prozent: dublettenquote,\n    ga4_gesendet: ga4Gesendet,\n    ga4_fehler: ga4Fehler,\n    capi_gesendet: capiGesendet,\n    capi_fehler: capiFehler,\n    übersprungen,\n    zustellversuche: versucht,\n    zustellquote_prozent: zustellquote,\n    fehler_gesamt: fehlerGesamt,\n    zusammenfassung:\n      `${heute.day}: ${angenommen} angenommen, ${duplikate} Duplikate (${dublettenquote} Prozent), `\n      + `GA4 ${ga4Gesendet} gesendet / ${ga4Fehler} Fehler, CAPI ${capiGesendet} gesendet / ${capiFehler} Fehler, `\n      + `${übersprungen} übersprungen, Zustellquote ${zustellquote} Prozent.`,\n  },\n}];"
+      },
+      "id": "b2000000-0000-4000-8000-000000000004",
+      "name": "Bericht bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.fehler_gesamt }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000005",
+      "name": "Gab es Fehler?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b2000000-0000-4000-8000-000000000006",
+      "name": "Hinweis bei Fehlern",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        760,
+        200
+      ],
+      "notes": "Hier hängt in einem echten Aufbau die Benachrichtigung dran. Ein Bericht, den niemand liest, ist kein Bericht."
+    },
+    {
+      "parameters": {},
+      "id": "b2000000-0000-4000-8000-000000000007",
+      "name": "Alles ruhig",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        760,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000008",
+      "name": "Zeile in Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1000,
+        300
+      ],
+      "disabled": true,
+      "notes": "Ausgeliefert im deaktivierten Zustand, damit der Workflow ohne Google-Zugangsdaten grün durchläuft. Tabelle eintragen, Zugangsdaten verbinden, Haken entfernen."
+    }
+  ],
+  "connections": {
+    "Jeden Morgen um acht": {
+      "main": [
+        [
+          {
+            "node": "Einstellungen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Einstellungen": {
+      "main": [
+        [
+          {
+            "node": "Zähler holen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zähler holen": {
+      "main": [
+        [
+          {
+            "node": "Bericht bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bericht bauen": {
+      "main": [
+        [
+          {
+            "node": "Gab es Fehler?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gab es Fehler?": {
+      "main": [
+        [
+          {
+            "node": "Hinweis bei Fehlern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alles ruhig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hinweis bei Fehlern": {
+      "main": [
+        [
+          {
+            "node": "Zeile in Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alles ruhig": {
+      "main": [
+        [
+          {
+            "node": "Zeile in Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": [],
+  "versionId": "c0000000-0000-4000-8000-000000000002"
+}

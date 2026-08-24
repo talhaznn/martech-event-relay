@@ -1,0 +1,42 @@
+# Cloudflare Worker des Relays.
+#
+# Vor dem ersten Deploy sind genau zwei Stellen anzupassen:
+#   1. Die id unter [[kv_namespaces]]. Sie entsteht mit
+#        npx wrangler kv namespace create RELAY
+#   2. GA4_MEASUREMENT_ID unter [vars], sobald die GA4 Property angelegt ist.
+#
+# Geheimnisse stehen nicht in dieser Datei, sondern werden gesetzt mit
+#   npx wrangler secret put RELAY_HMAC_SECRET
+#   npx wrangler secret put GA4_API_SECRET
+#   npx wrangler secret put N8N_RETRY_WEBHOOK
+
+name = "martech-event-relay"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Die Demoseite liegt als statische Datei daneben und wird von Cloudflare direkt ausgeliefert.
+# Der Worker sieht nur die API-Aufrufe.
+[assets]
+directory = "./public"
+
+[observability]
+enabled = true
+
+# Speicher für Deduplizierung, zwischengespeicherte Umschläge, Zähler und den Log-Ringpuffer.
+[[kv_namespaces]]
+binding = "RELAY"
+id = "0000000000000000000000000000ffff"   # PLATZHALTER, vor dem Deploy ersetzen
+
+[vars]
+# Messstream der GA4 Property, Form G-XXXXXXXXXX. Leer bedeutet Trockenlauf.
+GA4_MEASUREMENT_ID = ""
+# "true" schaltet den Debug-Modus ein: das Ereignis erscheint in DebugView und die Antwort
+# enthält zusätzlich die Befunde des Validierungsendpunkts.
+GA4_DEBUG = "true"
+# Kommagetrennte Liste erlaubter Herkünfte für Aufrufe ohne Signatur.
+# "*" ist für die öffentliche Demo gedacht, in einem Kundenprojekt stünden hier die echten Domains.
+ALLOWED_ORIGINS = "*"
+# Lebensdauer der Dedup-Schlüssel und der zwischengespeicherten Umschläge in Sekunden.
+DEDUPE_TTL_SECONDS = "86400"
+# Leer bedeutet: der Relay ruft seinen eigenen Empfänger unter /capi/events auf.
+CAPI_ENDPOINT = ""

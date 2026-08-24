@@ -1,0 +1,44 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Unit-Tests und Ende-zu-Ende-Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+
+      # Die Unit-Tests brauchen keine Installation. Node fuehrt die TypeScript-Dateien
+      # seit 22.18 direkt aus, und der Worker hat null Laufzeitabhaengigkeiten.
+      - name: Unit-Tests
+        run: npm test
+
+      - name: Abhaengigkeiten fuer wrangler
+        run: npm install
+
+      - name: Typen pruefen
+        run: npm run typecheck
+
+      - name: Worker lokal starten
+        run: |
+          cp .dev.vars.example .dev.vars
+          npx wrangler dev --port 8787 --ip 127.0.0.1 &
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:8787/health > /dev/null; then
+              echo "Worker ist bereit"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Worker wurde nicht rechtzeitig bereit"; exit 1
+
+      - name: Ende-zu-Ende-Test
+        run: ./scripts/send-test-events.sh http://127.0.0.1:8787

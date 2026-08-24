@@ -1,0 +1,364 @@
+{
+  "id": "relayRetry000001",
+  "name": "relay – retry-failed-events",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "relay-retry",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Webhook vom Relay",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        300
+      ],
+      "webhookId": "a1000000-0000-4000-8000-0000000000ff",
+      "notes": "Diese Adresse gehört in das Geheimnis N8N_RETRY_WEBHOOK des Workers."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Der Relay meldet nur die event_id und den Namen des Ziels. Die Nutzdaten holt er sich\n// beim Wiederholversuch selbst aus KV. Dadurch läuft hier nichts Personenbezogenes durch.\nconst ticket = $json.body ?? $json;\n\nif (!ticket.event_id || !ticket.sink || !ticket.replay_url) {\n  throw new Error('Unvollständiges Ticket. Erwartet werden event_id, sink und replay_url.');\n}\n\nreturn [{\n  json: {\n    event_id: ticket.event_id,\n    sink: ticket.sink,\n    replay_url: ticket.replay_url,\n    attempt: Number(ticket.attempt ?? 1),\n    max_attempts: 3,\n    erster_fehler: String(ticket.error ?? 'unbekannt').slice(0, 500),\n  },\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Ticket lesen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -140,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.min(300, 15 * Math.pow(2, $json.attempt - 1)) }}",
+        "unit": "seconds"
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Wartezeit",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        300
+      ],
+      "webhookId": "a1000000-0000-4000-8000-0000000000fe",
+      "notes": "Wachsender Abstand: 15, 30, 60 Sekunden. Ein sofortiger Wiederholversuch trifft ein überlastetes Zielsystem nur noch härter."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signiert wird die Zeichenkette \"<zeitstempel>.<koerper>\", nicht nur der Körper.\n// Genau dieselbe Regel steht in src/signature.ts. Wäre der Zeitstempel nicht Teil der Signatur,\n// ließe sich derselbe Aufruf beliebig oft wiederholen.\nconst koerper = JSON.stringify({ event_id: $json.event_id, sink: $json.sink });\nconst zeitstempel = Math.floor(Date.now() / 1000);\n\nreturn [{\n  json: {\n    ...$json,\n    koerper,\n    zeitstempel,\n    zuSignieren: `${zeitstempel}.${koerper}`,\n  },\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Signatur vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.zuSignieren }}",
+        "dataPropertyName": "signatur",
+        "secret": "HIER_DAS_GLEICHE_GEHEIMNIS_WIE_RELAY_HMAC_SECRET",
+        "encoding": "hex"
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "HMAC bilden",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        520,
+        300
+      ],
+      "notes": "Dasselbe Geheimnis, das im Worker unter RELAY_HMAC_SECRET liegt."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Signatur vorbereiten').item.json.replay_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-relay-timestamp",
+              "value": "={{ $('Signatur vorbereiten').item.json.zeitstempel }}"
+            },
+            {
+              "name": "x-relay-signature",
+              "value": "=v1={{ $json.signatur }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $('Signatur vorbereiten').item.json.koerper }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "POST /replay",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        740,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Erfolgreich?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Zugestellt",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        200
+      ],
+      "notes": "Das Ereignis ist beim Ziel angekommen. Der Relay hat den Wiederholeintrag gelöscht."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Der Versuch hat nicht geklappt. Hochzählen und entscheiden, ob es noch einmal weitergeht.\nconst vorher = $('Ticket lesen').item.json;\nconst antwort = $json;\n\n// Ein 404 bedeutet, dass der zwischengespeicherte Umschlag abgelaufen ist. Das heilt kein\n// weiterer Versuch, also wird sofort abgebrochen.\nconst endgültig = antwort.statusCode === 404 || antwort.body?.terminal === true;\n\nreturn [{\n  json: {\n    ...vorher,\n    attempt: vorher.attempt + 1,\n    letzter_status: antwort.statusCode ?? 0,\n    letzter_fehler: JSON.stringify(antwort.body ?? {}).slice(0, 500),\n    endgültig,\n  },\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Versuch hochzählen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.attempt }}",
+              "rightValue": "={{ $json.max_attempts }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.endgültig }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-00000000000a",
+      "name": "Noch ein Versuch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Endstation. Hier hängt in einem echten Aufbau die Benachrichtigung dran, zum Beispiel\n// Slack, E-Mail oder ein Eintrag im Ticketsystem. Wichtig ist, dass ein Mensch davon erfährt,\n// statt dass die Konversion still verschwindet.\nconst t = $json;\nreturn [{\n  json: {\n    alarm: true,\n    text: `Ereignis ${t.event_id} konnte nach ${t.attempt - 1} Versuchen nicht an ${t.sink} zugestellt werden.`\n      + (t.endgültig ? ' Der zwischengespeicherte Umschlag ist abgelaufen, weitere Versuche sind zwecklos.' : ''),\n    event_id: t.event_id,\n    sink: t.sink,\n    versuche: t.attempt - 1,\n    letzter_status: t.letzter_status ?? null,\n    letzter_fehler: t.letzter_fehler ?? t.erster_fehler,\n  },\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-00000000000b",
+      "name": "Alarm",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1620,
+        540
+      ],
+      "notes": "Hier hängt in einem echten Aufbau Slack, E-Mail oder ein Ticket dran."
+    }
+  ],
+  "connections": {
+    "Webhook vom Relay": {
+      "main": [
+        [
+          {
+            "node": "Ticket lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket lesen": {
+      "main": [
+        [
+          {
+            "node": "Wartezeit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wartezeit": {
+      "main": [
+        [
+          {
+            "node": "Signatur vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signatur vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "HMAC bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HMAC bilden": {
+      "main": [
+        [
+          {
+            "node": "POST /replay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /replay": {
+      "main": [
+        [
+          {
+            "node": "Erfolgreich?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erfolgreich?": {
+      "main": [
+        [
+          {
+            "node": "Zugestellt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Versuch hochzählen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versuch hochzählen": {
+      "main": [
+        [
+          {
+            "node": "Noch ein Versuch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Noch ein Versuch?": {
+      "main": [
+        [
+          {
+            "node": "Wartezeit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alarm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": [],
+  "versionId": "c0000000-0000-4000-8000-000000000001"
+}

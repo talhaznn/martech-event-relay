@@ -1,0 +1,22 @@
+{
+  "name": "martech-event-relay",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Serverseitiger Event-Relay: GTM und GA4 im Browser, Measurement Protocol und ein CAPI-förmiger Empfänger auf dem Server, Deduplizierung über eine gemeinsame event_id, Wiederholversuche über n8n.",
+  "license": "MIT",
+  "author": "Talha Zengin",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail --format pretty",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260820.1",
+    "@types/node": "^22.20.1",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.0.0"
+  }
+}

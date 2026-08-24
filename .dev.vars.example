@@ -1,0 +1,14 @@
+# Kopiere diese Datei nach .dev.vars und trage eigene Werte ein.
+# .dev.vars ist in .gitignore und wird nie eingecheckt.
+
+# Gemeinsames Geheimnis fuer die HMAC-Signatur der Server-zu-Server-Aufrufe.
+# Erzeugen mit: openssl rand -hex 32
+RELAY_HMAC_SECRET=dev-secret-nur-lokal-bitte-ersetzen
+
+# API Secret der GA4 Property, Admin -> Datenstreams -> Measurement Protocol API secrets.
+# Bleibt es leer, laeuft der GA4-Sink im Trockenlauf und schreibt nur ins Log.
+GA4_API_SECRET=
+
+# Webhook-URL des n8n-Workflows "retry-failed-events".
+# Bleibt sie leer, wird die Wiederholung nur protokolliert und nicht ausgeloest.
+N8N_RETRY_WEBHOOK=

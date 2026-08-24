@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>MarTech Event Relay — Demo</title>
+
+<!--
+  ============================================================================
+  EINSTELLUNGEN
+  Hier stehen die drei Werte, die von Konto zu Konto verschieden sind.
+  Sie lassen sich auch unten auf der Seite eintragen, dann liegen sie im
+  localStorage des Browsers und diese Datei bleibt unverändert.
+  ============================================================================
+-->
+<script>
+  window.RELAY_CONFIG = {
+    // Leer bedeutet: derselbe Ursprung wie diese Seite. Für den lokalen Betrieb
+    // gegen "wrangler dev" kann hier http://127.0.0.1:8787 stehen.
+    workerUrl: '',
+    // Web-Container aus dem Google Tag Manager, Form GTM-XXXXXXX.
+    gtmId: '',
+    // Messstream der GA4 Property, Form G-XXXXXXXXXX. Wird nur gebraucht,
+    // um die session_id aus dem passenden Cookie zu lesen.
+    measurementId: ''
+  };
+
+  var gespeichert = null;
+  try { gespeichert = JSON.parse(localStorage.getItem('relay_config') || 'null'); } catch (e) {}
+  if (gespeichert) Object.assign(window.RELAY_CONFIG, gespeichert);
+
+  window.dataLayer = window.dataLayer || [];
+</script>
+
+<!-- Google Tag Manager. Wird nur eingehängt, wenn eine Container-ID vorliegt. -->
+<script>
+(function () {
+  var id = window.RELAY_CONFIG.gtmId;
+  if (!id) return;
+  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+  var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;
+  j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer',id);
+})();
+</script>
+
+<style>
+  :root {
+    --navy: #14284b;
+    --navy-hell: #24406e;
+    --orange: #ee7b30;
+    --orange-dunkel: #cf6520;
+    --grund: #f4f6fa;
+    --karte: #ffffff;
+    --rand: #dde3ec;
+    --text: #1c2433;
+    --text-leise: #5b6779;
+    --grün: #1f7a4d;
+    --gelb: #9a6b0d;
+    --rot: #b3261e;
+    --code-grund: #101827;
+    --code-text: #d7e2f2;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body {
+    margin: 0;
+    background: var(--grund);
+    color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 28px 24px 24px;
+    border-bottom: 4px solid var(--orange);
+  }
+  .huelle { max-width: 1160px; margin: 0 auto; }
+  header h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: #b9c6dd; max-width: 74ch; }
+  header a { color: #ffd0ac; }
+  .zustand { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: #e6edf8;
+  }
+  .punkt { width: 8px; height: 8px; border-radius: 50%; background: #7d8ba3; flex: none; }
+  .punkt.ok { background: #46c988; }
+  .punkt.warn { background: #f0b64b; }
+  .punkt.fehler { background: #f2705f; }
+
+  main { max-width: 1160px; margin: 0 auto; padding: 24px; }
+  .raster { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .raster { grid-template-columns: 1fr; } }
+
+  .karte { background: var(--karte); border: 1px solid var(--rand); border-radius: 10px; }
+  .karte + .karte { margin-top: 20px; }
+  .karte h2 {
+    margin: 0; padding: 14px 18px; font-size: 14px; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--navy); border-bottom: 1px solid var(--rand);
+  }
+  .karte .inhalt { padding: 18px; }
+
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--text-leise); margin-bottom: 5px; }
+  input[type="text"], input[type="email"], input[type="tel"], input[type="number"] {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--rand); border-radius: 7px;
+    font: inherit; font-size: 14px; background: #fbfcfe; color: var(--text);
+  }
+  input:focus { outline: 2px solid var(--orange); outline-offset: 1px; border-color: var(--orange); }
+  .feld + .feld { margin-top: 13px; }
+  .paar { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  .haken { display: flex; align-items: flex-start; gap: 9px; margin-top: 13px; font-size: 13.5px; color: var(--text); }
+  .haken input { margin-top: 3px; flex: none; }
+  .haken span b { font-weight: 600; }
+  .haken span small { display: block; color: var(--text-leise); font-size: 12px; }
+
+  button {
+    font: inherit; font-weight: 600; border-radius: 7px; padding: 10px 14px;
+    cursor: pointer; border: 1px solid transparent; width: 100%;
+  }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
+  .haupt { background: var(--orange); color: #fff; }
+  .haupt:hover:not(:disabled) { background: var(--orange-dunkel); }
+  .zweit { background: #fff; color: var(--navy); border-color: var(--navy-hell); margin-top: 10px; }
+  .zweit:hover:not(:disabled) { background: #eef2f8; }
+  .dritt { background: #fff; color: var(--text-leise); border-color: var(--rand); margin-top: 10px; font-weight: 500; }
+
+  .hinweis {
+    margin-top: 16px; padding: 12px 14px; background: #fdf4ec; border: 1px solid #f4d9c0;
+    border-left: 3px solid var(--orange); border-radius: 6px; font-size: 13px; color: #6b4a2c;
+  }
+  .hinweis b { color: #4a3018; }
+
+  .protokoll { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+  .leer { color: var(--text-leise); font-size: 14px; text-align: center; padding: 40px 20px; }
+  .eintrag { border: 1px solid var(--rand); border-radius: 8px; overflow: hidden; }
+  .eintrag > .kopf {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 10px 14px;
+    background: #f7f9fc; border-bottom: 1px solid var(--rand); font-size: 13px;
+  }
+  .eintrag > .kopf .zeit {
+    color: var(--text-leise); font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .eintrag > .kopf .kennung {
+    margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; color: var(--navy-hell); background: #eaf0f9; padding: 2px 7px; border-radius: 4px;
+    max-width: 100%; overflow-wrap: anywhere;
+  }
+  .marke { font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; }
+  .marke.neu { background: #e3f5ec; color: var(--grün); }
+  .marke.dublette { background: #fdf3dd; color: var(--gelb); }
+  .marke.fehler { background: #fbe6e4; color: var(--rot); }
+  .schritte { padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; font-size: 13px; }
+  .schritt { display: flex; gap: 10px; align-items: baseline; }
+  .schritt .sym { flex: none; width: 16px; text-align: center; font-weight: 700; }
+  .schritt .sym.ok { color: var(--grün); }
+  .schritt .sym.übersprungen { color: var(--text-leise); }
+  .schritt .sym.fehler { color: var(--rot); }
+  .schritt small { color: var(--text-leise); display: block; }
+  pre {
+    margin: 0; background: var(--code-grund); color: var(--code-text); padding: 13px 15px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.55;
+    overflow-x: auto; border-top: 1px solid var(--rand);
+  }
+  details > summary {
+    cursor: pointer; padding: 8px 14px; font-size: 12.5px; color: var(--text-leise);
+    background: #f7f9fc; border-top: 1px solid var(--rand); user-select: none;
+  }
+  .erklaerung { font-size: 13.5px; color: var(--text-leise); }
+  .erklaerung p { margin: 0 0 10px; }
+  .erklaerung p:last-child { margin-bottom: 0; }
+  .erklaerung code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+    background: #eef2f8; padding: 1px 5px; border-radius: 4px; color: var(--navy);
+  }
+  footer { max-width: 1160px; margin: 0 auto; padding: 8px 24px 40px; color: var(--text-leise); font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="huelle">
+    <h1>MarTech Event Relay</h1>
+    <p>
+      Eine Konversion, zwei Wege. Der Browser meldet sie über den Google Tag Manager an GA4.
+      Parallel geht dieselbe Konversion an einen Cloudflare Worker, der sie serverseitig an das
+      Measurement Protocol und an einen Empfänger in der Form der Meta Conversions API weiterreicht.
+      Beide Wege tragen dieselbe <code style="color:#ffd0ac">event_id</code>.
+    </p>
+    <div class="zustand">
+      <span class="chip"><span class="punkt" id="punkt-worker"></span><span id="text-worker">Worker wird geprüft</span></span>
+      <span class="chip"><span class="punkt" id="punkt-gtm"></span><span id="text-gtm">Tag Manager</span></span>
+      <span class="chip"><span class="punkt" id="punkt-ga"></span><span id="text-ga">GA4 client_id</span></span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="raster">
+
+    <div>
+      <section class="karte">
+        <h2>Konversion auslösen</h2>
+        <div class="inhalt">
+          <div class="feld">
+            <label for="f-email">E-Mail</label>
+            <input type="email" id="f-email" value="max.mustermann@example.com" autocomplete="off">
+          </div>
+          <div class="feld">
+            <label for="f-telefon">Telefon</label>
+            <input type="tel" id="f-telefon" value="0151 51834055" autocomplete="off">
+          </div>
+          <div class="feld paar">
+            <div>
+              <label for="f-vorname">Vorname</label>
+              <input type="text" id="f-vorname" value="Max" autocomplete="off">
+            </div>
+            <div>
+              <label for="f-nachname">Nachname</label>
+              <input type="text" id="f-nachname" value="Mustermann" autocomplete="off">
+            </div>
+          </div>
+          <div class="feld paar">
+            <div>
+              <label for="f-wert">Wert in Euro</label>
+              <input type="number" id="f-wert" value="49.90" step="0.01" min="0">
+            </div>
+            <div>
+              <label for="f-name">Ereignisname</label>
+              <input type="text" id="f-name" value="demo_conversion" autocomplete="off">
+            </div>
+          </div>
+
+          <label class="haken">
+            <input type="checkbox" id="f-analytics" checked>
+            <span><b>Einwilligung Analytics</b><small>Ohne diesen Haken überspringt der Relay das Measurement Protocol.</small></span>
+          </label>
+          <label class="haken">
+            <input type="checkbox" id="f-marketing" checked>
+            <span><b>Einwilligung Marketing</b><small>Ohne diesen Haken überspringt der Relay den werblichen Empfänger.</small></span>
+          </label>
+
+          <div style="margin-top:18px">
+            <button class="haupt" id="btn-senden">Konversion senden</button>
+            <button class="zweit" id="btn-wiederholen" disabled>Dieselbe event_id noch einmal senden</button>
+            <button class="dritt" id="btn-leeren">Protokoll leeren</button>
+          </div>
+
+          <div class="hinweis">
+            <b>Warum der zweite Knopf.</b> Er schickt die vorherige Anfrage unverändert noch einmal,
+            mit derselben <code>event_id</code>. So sieht ein doppelter Klick oder ein Wiederholversuch
+            nach einem Netzwerkfehler aus. Der Relay erkennt das und leitet nicht erneut weiter.
+          </div>
+        </div>
+      </section>
+
+      <section class="karte">
+        <h2>Einstellungen</h2>
+        <div class="inhalt">
+          <div class="feld">
+            <label for="k-worker">Adresse des Workers</label>
+            <input type="text" id="k-worker" placeholder="leer bedeutet gleicher Ursprung">
+          </div>
+          <div class="feld">
+            <label for="k-gtm">Container im Tag Manager</label>
+            <input type="text" id="k-gtm" placeholder="GTM-XXXXXXX">
+          </div>
+          <div class="feld">
+            <label for="k-mess">Messstream in GA4</label>
+            <input type="text" id="k-mess" placeholder="G-XXXXXXXXXX">
+          </div>
+          <button class="zweit" id="btn-speichern" style="margin-top:14px">Speichern und Seite neu laden</button>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section class="karte">
+        <h2>Ereignisprotokoll</h2>
+        <div class="protokoll" id="protokoll">
+          <div class="leer">Noch nichts gesendet. Der Knopf links legt los.</div>
+        </div>
+      </section>
+
+      <section class="karte">
+        <h2>Warum die beiden Ereignisse verschieden heißen</h2>
+        <div class="inhalt erklaerung">
+          <p>
+            Der Browser schickt über den Tag Manager <code>demo_conversion</code> an GA4.
+            Der Worker schickt <code>demo_conversion_server</code>. Beide tragen denselben Parameter
+            <code>event_id</code>.
+          </p>
+          <p>
+            Das ist Absicht. Meta dedupliziert Browser- und Serverereignis anhand von
+            <code>event_id</code> und <code>event_name</code> selbst. <b>GA4 tut das nicht.</b>
+            Wer dieselbe Konversion unter demselben Namen einmal über den Tag Manager und einmal
+            über das Measurement Protocol schickt, hat sie in GA4 zweimal.
+          </p>
+          <p>
+            Deshalb unterscheiden sich hier die Namen, und die Zusammengehörigkeit hängt am
+            gemeinsamen Parameter. In DebugView stehen beide nebeneinander und lassen sich über die
+            <code>event_id</code> derselben Anfrage zuordnen. Die Deduplizierung, die GA4 nicht mitbringt,
+            übernimmt der Relay: dieselbe <code>event_id</code> kommt kein zweites Mal durch.
+          </p>
+        </div>
+      </section>
+    </div>
+
+  </div>
+</main>
+
+<footer class="huelle">
+  Arbeitsprobe von Talha Zengin. Quelltext unter
+  <a href="https://github.com/talhaznn/martech-event-relay">github.com/talhaznn/martech-event-relay</a>.
+  Alle Eingaben sind Beispielwerte, es werden keine Daten gespeichert. Der werbliche Empfänger ist
+  nachgebildet und spricht nicht mit Meta.
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var config = window.RELAY_CONFIG;
+  var letzteAnfrage = null;
+
+  function basis() {
+    return (config.workerUrl || '').replace(/\/+$/, '');
+  }
+
+  function eintragen(id, klasse, text) {
+    document.getElementById('punkt-' + id).className = 'punkt ' + klasse;
+    document.getElementById('text-' + id).textContent = text;
+  }
+
+  /**
+   * Liest die GA4 client_id aus dem _ga Cookie.
+   * Das Cookie sieht so aus: GA1.1.1234567890.1756108800
+   * Gebraucht werden nur die letzten beiden Abschnitte. Fehlt der Wert, legt GA4 für das
+   * Serverereignis einen eigenen Nutzer an und der Zusammenhang zur Sitzung geht verloren.
+   */
+  function clientId() {
+    var treffer = document.cookie.match(/_ga=GA\d\.\d\.(\d+\.\d+)/);
+    return treffer ? treffer[1] : null;
+  }
+
+  /**
+   * Liest die session_id aus dem streambezogenen Cookie _ga_<Kennung>.
+   * Aufbau: GS1.1.<session_id>.<sitzungszähler>....
+   */
+  function sessionId() {
+    var kennung = (config.measurementId || '').replace(/^G-/, '');
+    if (!kennung) return null;
+    var treffer = document.cookie.match(new RegExp('_ga_' + kennung + '=GS\\d\\.\\d\\.(\\d+)'));
+    return treffer ? treffer[1] : null;
+  }
+
+  function neueEventId() {
+    var roh = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
+    return 'evt_' + roh.replace(/-/g, '');
+  }
+
+  function jetzt() {
+    return new Date().toLocaleTimeString('de-DE');
+  }
+
+  function baueAnfrage() {
+    var basisname = (document.getElementById('f-name').value || 'demo_conversion').trim();
+    var wert = parseFloat(document.getElementById('f-wert').value);
+
+    var nutzdaten = {
+      event_id: neueEventId(),
+      // Der Servername unterscheidet sich bewusst vom Browsernamen. Die Begründung steht auf der Seite.
+      event_name: basisname + '_server',
+      event_time: Math.floor(Date.now() / 1000),
+      action_source: 'website',
+      event_source_url: window.location.href,
+      user_data: {
+        email: document.getElementById('f-email').value.trim(),
+        phone: document.getElementById('f-telefon').value.trim(),
+        first_name: document.getElementById('f-vorname').value.trim(),
+        last_name: document.getElementById('f-nachname').value.trim(),
+        country: 'DE'
+      },
+      custom_data: {},
+      consent: {
+        analytics: document.getElementById('f-analytics').checked,
+        marketing: document.getElementById('f-marketing').checked
+      }
+    };
+
+    if (!isNaN(wert)) {
+      nutzdaten.custom_data.value = Math.round(wert * 100) / 100;
+      nutzdaten.custom_data.currency = 'EUR';
+    }
+
+    var cid = clientId();
+    if (cid) nutzdaten.client_id = cid;
+    var sid = sessionId();
+    if (sid) nutzdaten.session_id = sid;
+
+    // Leere Felder gar nicht erst mitschicken. Der Relay lehnt sie sonst zu Recht ab.
+    Object.keys(nutzdaten.user_data).forEach(function (schluessel) {
+      if (!nutzdaten.user_data[schluessel]) delete nutzdaten.user_data[schluessel];
+    });
+
+    return { basisname: basisname, nutzdaten: nutzdaten };
+  }
+
+  function element(tag, klasse, text) {
+    var el = document.createElement(tag);
+    if (klasse) el.className = klasse;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+
+  function zeichneEintrag(anfrage, antwort, httpStatus, fehler) {
+    var protokoll = document.getElementById('protokoll');
+    var leer = protokoll.querySelector('.leer');
+    if (leer) leer.remove();
+
+    var dublette = antwort && antwort.duplicate === true;
+    var eintrag = element('div', 'eintrag');
+
+    var kopf = element('div', 'kopf');
+    var marke = element('span', 'marke ' + (fehler ? 'fehler' : dublette ? 'dublette' : 'neu'),
+      fehler ? 'Fehler' : dublette ? 'Duplikat' : 'Angenommen');
+    kopf.appendChild(marke);
+    kopf.appendChild(element('span', 'zeit', jetzt()));
+    if (httpStatus) kopf.appendChild(element('span', 'zeit', 'HTTP ' + httpStatus));
+    kopf.appendChild(element('span', 'kennung', anfrage.nutzdaten.event_id));
+    eintrag.appendChild(kopf);
+
+    var schritte = element('div', 'schritte');
+
+    schritte.appendChild(baueSchritt('ok', 'dataLayer.push',
+      'Ereignis ' + anfrage.basisname + ' an den Tag Manager, mit event_id als Parameter.'));
+
+    if (fehler) {
+      schritte.appendChild(baueSchritt('fehler', 'POST /collect', String(fehler)));
+    } else if (dublette) {
+      var seit = antwort.first_seen_at ? new Date(antwort.first_seen_at * 1000).toLocaleTimeString('de-DE') : 'unbekannt';
+      schritte.appendChild(baueSchritt('übersprungen', 'POST /collect',
+        'Dieselbe event_id wurde bereits um ' + seit + ' angenommen. Kein erneutes Weiterleiten.'));
+    } else if (antwort && antwort.sinks) {
+      schritte.appendChild(baueSchritt('ok', 'POST /collect', 'Angenommen und weitergereicht.'));
+      antwort.sinks.forEach(function (ziel) {
+        var symbol = ziel.status === 'sent' ? 'ok' : ziel.status === 'skipped' ? 'übersprungen' : 'fehler';
+        var name = ziel.sink === 'ga4' ? 'GA4 Measurement Protocol' : 'Empfänger in CAPI-Form';
+        schritte.appendChild(baueSchritt(symbol, name,
+          (ziel.detail || ziel.status) + (ziel.duration_ms !== undefined ? ' (' + ziel.duration_ms + ' ms)' : '')));
+      });
+    }
+    eintrag.appendChild(schritte);
+
+    var details = document.createElement('details');
+    details.appendChild(element('summary', null, 'Gesendete Nutzlast und vollständige Antwort'));
+    var vor = element('pre', null,
+      '// gesendet an POST /collect\n' + JSON.stringify(anfrage.nutzdaten, null, 2) +
+      '\n\n// Antwort\n' + JSON.stringify(antwort !== null ? antwort : { fehler: String(fehler) }, null, 2));
+    details.appendChild(vor);
+    eintrag.appendChild(details);
+
+    protokoll.insertBefore(eintrag, protokoll.firstChild);
+  }
+
+  function baueSchritt(symbolKlasse, titel, text) {
+    var zeile = element('div', 'schritt');
+    var zeichen = symbolKlasse === 'ok' ? '✓' : symbolKlasse === 'fehler' ? '✗' : '–';
+    zeile.appendChild(element('span', 'sym ' + symbolKlasse, zeichen));
+    var rechts = element('div');
+    rechts.appendChild(element('b', null, titel));
+    rechts.appendChild(element('small', null, text));
+    zeile.appendChild(rechts);
+    return zeile;
+  }
+
+  async function senden(anfrage) {
+    // Weg eins: in den dataLayer, von dort holt der Tag Manager das Ereignis ab und schickt es an GA4.
+    window.dataLayer.push({
+      event: anfrage.basisname,
+      event_id: anfrage.nutzdaten.event_id,
+      value: anfrage.nutzdaten.custom_data.value,
+      currency: anfrage.nutzdaten.custom_data.currency
+    });
+
+    // Weg zwei: an den Relay. Von dort geht es serverseitig weiter.
+    var antwort = null;
+    var status = null;
+    var fehler = null;
+    try {
+      var response = await fetch(basis() + '/collect', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(anfrage.nutzdaten)
+      });
+      status = response.status;
+      antwort = await response.json();
+    } catch (e) {
+      fehler = e && e.message ? e.message : String(e);
+    }
+
+    zeichneEintrag(anfrage, antwort, status, fehler);
+  }
+
+  document.getElementById('btn-senden').addEventListener('click', async function () {
+    this.disabled = true;
+    letzteAnfrage = baueAnfrage();
+    await senden(letzteAnfrage);
+    this.disabled = false;
+    document.getElementById('btn-wiederholen').disabled = false;
+  });
+
+  document.getElementById('btn-wiederholen').addEventListener('click', async function () {
+    if (!letzteAnfrage) return;
+    this.disabled = true;
+    // Bewusst dieselbe Nutzlast, unverändert, einschließlich event_id und event_time.
+    await senden(letzteAnfrage);
+    this.disabled = false;
+  });
+
+  document.getElementById('btn-leeren').addEventListener('click', function () {
+    var protokoll = document.getElementById('protokoll');
+    protokoll.innerHTML = '';
+    protokoll.appendChild(element('div', 'leer', 'Noch nichts gesendet. Der Knopf links legt los.'));
+  });
+
+  document.getElementById('k-worker').value = config.workerUrl || '';
+  document.getElementById('k-gtm').value = config.gtmId || '';
+  document.getElementById('k-mess').value = config.measurementId || '';
+
+  document.getElementById('btn-speichern').addEventListener('click', function () {
+    localStorage.setItem('relay_config', JSON.stringify({
+      workerUrl: document.getElementById('k-worker').value.trim(),
+      gtmId: document.getElementById('k-gtm').value.trim(),
+      measurementId: document.getElementById('k-mess').value.trim()
+    }));
+    location.reload();
+  });
+
+  // Zustandsanzeige oben.
+  (async function () {
+    try {
+      var response = await fetch(basis() + '/health');
+      var daten = await response.json();
+      if (daten.status === 'ok') {
+        var trocken = !daten.config.ga4_measurement_id_set || !daten.config.ga4_api_secret_set;
+        eintragen('worker', trocken ? 'warn' : 'ok',
+          trocken ? 'Worker läuft, GA4 im Trockenlauf' : 'Worker läuft, GA4 angebunden');
+      } else {
+        eintragen('worker', 'fehler', 'Worker antwortet unerwartet');
+      }
+    } catch (e) {
+      eintragen('worker', 'fehler', 'Worker nicht erreichbar');
+    }
+  })();
+
+  if (!config.gtmId) {
+    eintragen('gtm', 'warn', 'Keine Container-ID eingetragen');
+  } else {
+    setTimeout(function () {
+      var geladen = !!(window.google_tag_manager && window.google_tag_manager[config.gtmId]);
+      eintragen('gtm', geladen ? 'ok' : 'fehler', geladen ? 'Container ' + config.gtmId + ' geladen' : 'Container blockiert oder unbekannt');
+    }, 1500);
+  }
+
+  setTimeout(function () {
+    var cid = clientId();
+    eintragen('ga', cid ? 'ok' : 'warn', cid ? 'client_id ' + cid : 'Kein _ga Cookie gefunden');
+  }, 2000);
+})();
+</script>
+</body>
+</html>
