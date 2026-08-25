@@ -47,7 +47,7 @@ cd martech-event-relay
 npm test
 ```
 
-56 Tests, keine einzige Abhängigkeit muss dafür installiert werden. Node führt die TypeScript-Dateien
+57 Tests, keine einzige Abhängigkeit muss dafür installiert werden. Node führt die TypeScript-Dateien
 seit Version 22.18 direkt aus.
 
 Dann der Worker mitsamt Demoseite:
@@ -378,8 +378,9 @@ Es geht um die Zustellung eines Ereignisses, nicht um dessen Bewertung.
 ## Tests
 
 ```bash
-npm test                      # 56 Tests, keine Installation nötig
+npm test                      # 57 Tests, keine Installation nötig
 ./scripts/send-test-events.sh # 15 Zusicherungen gegen einen laufenden Worker
+./scripts/wiederholtest.sh    # 9 Zusicherungen, erzwungener Fehlschlag und Zustellung im zweiten Anlauf
 ```
 
 Die Testfälle decken die Stellen ab, an denen dieses Projekt tatsächlich falsch sein könnte:
@@ -393,11 +394,30 @@ Die Testfälle decken die Stellen ab, an denen dieses Projekt tatsächlich falsc
 | `test/sinks.test.ts` | Nutzlast für GA4 und CAPI, Zeitstempel jenseits von zweiundsiebzig Stunden, Abbildung der Einwilligung |
 | `test/dedupe.test.ts` | Duplikat beim zweiten Mal, Ablauf der Lebensdauer, Zählen über die Seitengrenze von KV hinweg |
 
-Der Ende-zu-Ende-Test läuft gegen einen echten Worker, nicht gegen Attrappen. Der Wiederholweg wurde
-zusätzlich vollständig durchgespielt: erzwungener Fehlschlag, Umschlag in KV, n8n signiert, Worker
-prüft, Zustellung im zweiten Anlauf. Dass n8n mit einem anderen Kryptografie-Werkzeug signiert als
-der Worker, ist dabei ein nützlicher Nebeneffekt, weil es beide Implementierungen gegeneinander
-prüft.
+Der Ende-zu-Ende-Test läuft gegen einen echten Worker, nicht gegen Attrappen. Dass n8n mit einem
+anderen Kryptografie-Werkzeug signiert als der Worker, ist dabei ein nützlicher Nebeneffekt, weil es
+beide Implementierungen gegeneinander prüft.
+
+### Den Wiederholweg selbst nachstellen
+
+`./scripts/wiederholtest.sh` fährt alles hoch, was dafür nötig ist, und räumt danach wieder auf.
+Ein echtes Geheimnis wird nirgends gebraucht: das Skript erzeugt für jeden Lauf ein Wegwerf-Geheimnis
+und gibt es aus. Ohne `GA4_API_SECRET` läuft der GA4-Sink im Trockenlauf, es geht also nichts an Google.
+
+Der Fehlschlag ist erzwungen statt abgewartet. `scripts/wiederhol-empfaenger.mjs` ist ein
+nachgebauter CAPI-Empfänger, der die ersten Aufrufe mit 503 beantwortet und erst danach mit 200.
+Damit ist der Fehler echt und der Lauf trotzdem jederzeit wiederholbar.
+
+```bash
+./scripts/wiederholtest.sh              # Wiederholung direkt signiert, ohne n8n
+./scripts/wiederholtest.sh --mit-n8n    # Wiederholung über eine laufende n8n-Instanz
+```
+
+Die zweite Form braucht n8n unter `http://127.0.0.1:5678`, den Workflow aus
+`n8n/retry-failed-events.json` importiert und veröffentlicht, und im Knoten `HMAC bilden` dasselbe
+Geheimnis, das das Skript ausgibt. Sie ist der vollständige Weg: erzwungener Fehlschlag, Umschlag in
+KV, Ticket an n8n, fünfzehn Sekunden Wartezeit, Signatur, Prüfung im Worker, Zustellung im zweiten
+Anlauf.
 
 ---
 
@@ -424,7 +444,7 @@ public/index.html     Demoseite
 n8n/                  zwei importierbare Workflows
 gtm/                  Container-Export und Anleitung von Hand
 docs/                 Architekturbild und Runbook
-scripts/              Ende-zu-Ende-Test
+scripts/              Ende-zu-Ende-Test und Wiederholtest
 test/                 Testfälle
 ```
 

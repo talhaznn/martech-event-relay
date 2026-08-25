@@ -169,23 +169,29 @@ npx wrangler deploy
 Der Google-Sheets-Knoten am Ende ist absichtlich deaktiviert, damit der Workflow ohne Zugangsdaten
 läuft. Wer ihn will: Tabelle anlegen, Zugangsdaten verbinden, Haken bei **Disabled** entfernen.
 
-**Den Wiederholweg einmal echt auslösen.** Dafür wird ein Fehlschlag erzwungen:
+**Den Wiederholweg einmal echt auslösen.** Dafür gibt es ein Skript. Es fährt einen lokalen Worker
+und einen nachgebauten CAPI-Empfänger hoch, der die ersten Aufrufe mit 503 beantwortet und erst
+danach mit 200, und räumt danach wieder auf. Die Produktion wird dabei nicht angefasst.
 
 ```bash
-# 1. Ziel absichtlich kaputt machen. Die Endung .invalid loest per Norm nie auf.
-npx wrangler deploy --var CAPI_ENDPOINT:https://kein-empfaenger.invalid/events
-
-# 2. Ereignis senden, das jetzt scheitern muss
-./scripts/send-test-events.sh https://martech-event-relay.<name>.workers.dev
-
-# 3. Ziel wieder heil machen
-npx wrangler deploy
+./scripts/wiederholtest.sh --mit-n8n
 ```
 
-Nach Schritt zwei steht in n8n unter **Executions** ein Lauf von `retry-failed-events`. Er wartet
-fünfzehn Sekunden und versucht es dann erneut. Läuft Schritt drei rechtzeitig, endet der Lauf grün
-bei **Zugestellt**. Wenn nicht, zählt er hoch und endet nach dem dritten Versuch bei **Alarm**.
-Beides ist ein gutes Bild, das erste ist das bessere.
+Das Skript gibt zu Beginn ein Wegwerf-Geheimnis aus. Genau dieses muss in n8n im Knoten
+**HMAC bilden** stehen, sonst scheitert die Signaturprüfung im Worker. Danach:
+
+1. Das Skript sendet ein Ereignis, der erste Zustellversuch scheitert mit 503.
+2. Der Worker legt den Umschlag in KV und schickt ein Ticket an den n8n-Webhook.
+3. n8n wartet fünfzehn Sekunden, signiert und ruft `/replay`.
+4. Der Empfänger nimmt jetzt an, der Lauf endet grün bei **Zugestellt**.
+
+In n8n steht der Lauf danach unter **Executions**. Die Dauer liegt bei gut fünfzehn Sekunden, das
+ist die Wartezeit des ersten Anlaufs und zugleich der Beleg, dass der Wait-Knoten wirklich gelaufen
+ist. Wer den Weg ohne n8n prüfen will, lässt `--mit-n8n` weg, dann signiert das Skript selbst.
+
+> Der frühere Weg über `wrangler deploy --var CAPI_ENDPOINT:https://kein-empfaenger.invalid/events`
+> funktioniert weiterhin, hat aber zwei Nachteile: er verändert die veröffentlichte Fassung, und man
+> muss sie innerhalb von fünfzehn Sekunden wieder heil machen, sonst endet der Lauf bei **Alarm**.
 
 ---
 
