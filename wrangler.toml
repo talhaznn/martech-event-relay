@@ -25,7 +25,7 @@ enabled = true
 # Speicher für Deduplizierung, zwischengespeicherte Umschläge, Zähler und den Log-Ringpuffer.
 [[kv_namespaces]]
 binding = "RELAY"
-id = "0000000000000000000000000000ffff"   # PLATZHALTER, vor dem Deploy ersetzen
+id = "262f5d2e1c304802ac23460d1b0bca10"
 
 [vars]
 # Messstream der GA4 Property, Form G-XXXXXXXXXX. Leer bedeutet Trockenlauf.
