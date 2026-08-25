@@ -62,11 +62,10 @@ häufigste Grund dafür, dass in DebugView gar nichts ankommt.
 
 - Trigger: `Benutzerdefiniertes Ereignis – demo_conversion`
 
-> Warum die Kennung zweimal steht: `event_id` ist bei GA4 ein reservierter Name. gtag überträgt
-> ihn nicht als gewöhnlichen Ereignisparameter, sondern als eigenes Transportfeld `evnid`, und in
-> der Parameterliste von DebugView taucht er dann nicht auf. Über das Measurement Protocol kommt
-> er dagegen als normaler Parameter an. `relay_event_id` trägt dieselbe Kennung unter einem
-> sichtbaren Namen, damit sich beide Wege im selben Bild vergleichen lassen.
+> Warum die Kennung zweimal steht: `event_id` hat bei Meta eine feste Bedeutung, dort läuft die
+> Zusammenführung von Browser- und Serverereignis darüber. `relay_event_id` ist ein selbst
+> vergebener Name ohne Sonderbedeutung bei irgendeinem Ziel. Damit hängt der Vergleich der beiden
+> Wege nicht davon ab, wie ein Ziel `event_id` auslegt. In GA4 DebugView stehen beide Parameter.
 
 ## 5. Vorschau und Veröffentlichen
 

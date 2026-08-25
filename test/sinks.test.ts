@@ -9,10 +9,10 @@ test('GA4 bekommt die event_id als Parameter mit', () => {
   assert.equal(payload.events[0]?.params.event_id, 'evt_4f3c2a1b9d8e7f60');
 });
 
-test('die Kennung geht zusätzlich unter einem nicht reservierten Namen mit', () => {
-  // event_id ist bei GA4 reserviert und wandert im Browser in das Transportfeld evnid,
-  // wo DebugView sie nicht als Parameter anzeigt. relay_event_id ist auf beiden Wegen
-  // sichtbar und macht den Vergleich im selben Bild überhaupt erst möglich.
+test('die Kennung geht zusätzlich unter einem eigenen Namen mit', () => {
+  // event_id hat bei Meta eine feste Bedeutung. relay_event_id ist ein selbst vergebener
+  // Name ohne Sonderbedeutung bei irgendeinem Ziel und macht den Vergleich der beiden
+  // Wege unabhängig davon, wie ein Ziel event_id auslegt.
   const payload = buildGa4Payload(umschlag(), NOW);
   assert.equal(payload.events[0]?.params.relay_event_id, 'evt_4f3c2a1b9d8e7f60');
   assert.equal(payload.events[0]?.params.relay_event_id, payload.events[0]?.params.event_id);

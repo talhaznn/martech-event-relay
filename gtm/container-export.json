@@ -58,7 +58,7 @@
         "tagId": "2",
         "name": "GA4 Ereignis – demo_conversion",
         "type": "gaawe",
-        "notes": "Der clientseitige Weg. Der Parameter event_id ist der einzige Grund, warum sich dieses Ereignis später dem Serverereignis zuordnen lässt. Der Servername lautet bewusst anders (demo_conversion_server), weil GA4 nicht über event_id dedupliziert. event_id ist bei GA4 reserviert und wandert im Browser in das Transportfeld evnid, wo DebugView sie nicht als Parameter zeigt. relay_event_id traegt dieselbe Kennung unter einem sichtbaren Namen, damit sich beide Wege vergleichen lassen.",
+        "notes": "Der clientseitige Weg. Der Parameter event_id ist der einzige Grund, warum sich dieses Ereignis später dem Serverereignis zuordnen lässt. Der Servername lautet bewusst anders (demo_conversion_server), weil GA4 nicht über event_id dedupliziert. Die Kennung geht zweimal mit: event_id hat bei Meta eine feste Bedeutung, relay_event_id ist ein selbst vergebener Name ohne Sonderbedeutung bei irgendeinem Ziel. Damit haengt der Vergleich der beiden Wege nicht davon ab, wie ein Ziel event_id auslegt.",
         "parameter": [
           {
             "type": "BOOLEAN",
