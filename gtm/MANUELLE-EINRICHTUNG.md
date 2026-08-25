@@ -55,11 +55,18 @@ häufigste Grund dafür, dass in DebugView gar nichts ankommt.
 | Parametername | Wert |
 |---|---|
 | `event_id` | `{{dlv – event_id}}` |
+| `relay_event_id` | `{{dlv – event_id}}` |
 | `value` | `{{dlv – value}}` |
 | `currency` | `{{dlv – currency}}` |
 | `relay_source` | `browser` |
 
 - Trigger: `Benutzerdefiniertes Ereignis – demo_conversion`
+
+> Warum die Kennung zweimal steht: `event_id` ist bei GA4 ein reservierter Name. gtag überträgt
+> ihn nicht als gewöhnlichen Ereignisparameter, sondern als eigenes Transportfeld `evnid`, und in
+> der Parameterliste von DebugView taucht er dann nicht auf. Über das Measurement Protocol kommt
+> er dagegen als normaler Parameter an. `relay_event_id` trägt dieselbe Kennung unter einem
+> sichtbaren Namen, damit sich beide Wege im selben Bild vergleichen lassen.
 
 ## 5. Vorschau und Veröffentlichen
 

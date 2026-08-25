@@ -34,7 +34,17 @@ interface Ga4Payload {
 export function buildGa4Payload(envelope: EventEnvelope, nowSeconds: number): Ga4Payload {
   const params: Record<string, string | number> = {
     // Verbindet das Serverereignis mit dem Browserereignis derselben Anfrage.
+    //
+    // event_id ist bei GA4 ein reservierter Name. gtag überträgt ihn im Browser nicht als
+    // gewöhnlichen Ereignisparameter, sondern als eigenes Transportfeld evnid, und in der
+    // Parameterliste von DebugView taucht er dann nicht auf. Über das Measurement Protocol
+    // kommt er dagegen als normaler Parameter an.
+    //
+    // Damit sich beide Wege im selben Bild vergleichen lassen, geht die Kennung zusätzlich
+    // unter einem eigenen, nicht reservierten Namen mit. relay_event_id ist auf beiden
+    // Wegen sichtbar, event_id bleibt für die Semantik erhalten.
     event_id: envelope.event_id,
+    relay_event_id: envelope.event_id,
     // Ohne diesen Parameter wertet GA4 das Ereignis häufig nicht in die Sitzung ein.
     engagement_time_msec: 1,
     relay_source: envelope.source,
