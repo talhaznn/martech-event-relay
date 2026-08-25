@@ -11,7 +11,7 @@ weiterreicht. Fehlgeschlagene Zustellungen laufen über n8n mit wachsendem Absta
 
 ## Warum es dieses Projekt gibt
 
-Ich baue seit anderthalb Jahren Automationen, APIs und interne Werkzeuge. Tracking im engeren Sinn,
+Ich baue Automationen, APIs und interne Werkzeuge. Tracking im engeren Sinn,
 also Google Tag Manager, GA4, Measurement Protocol und n8n, hatte ich beruflich bis dahin nicht in
 der Hand.
 
