@@ -128,17 +128,26 @@ export async function sendToCapi(
   const body = JSON.stringify(buildCapiPayload(envelope));
   const signature = await sign(env.RELAY_HMAC_SECRET, nowSeconds, body);
 
+  const anfrage = new Request(endpoint, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-relay-timestamp': String(nowSeconds),
+      'x-relay-signature': signature,
+    },
+    body,
+  });
+
+  // Zeigt CAPI_ENDPOINT auf den Relay selbst, läuft der Aufruf über die Service-Bindung.
+  // Der Weg über den öffentlichen Hostnamen wäre ein Selbstaufruf, den Cloudflare mit
+  // Fehler 1042 abbricht. Ein extern eingestelltes Ziel geht weiter übers Netz.
+  const eigenesZiel = !env.CAPI_ENDPOINT;
+  const senden = eigenesZiel && env.CAPI
+    ? () => env.CAPI!.fetch(anfrage)
+    : () => fetch(anfrage, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-relay-timestamp': String(nowSeconds),
-        'x-relay-signature': signature,
-      },
-      body,
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    const response = await senden();
 
     const text = await response.text();
     const ok = response.ok;

@@ -13,6 +13,12 @@
 export interface Env {
   RELAY: KVNamespace;
 
+  /**
+   * Bindung des Workers an sich selbst, für den Aufruf des eigenen CAPI-Empfängers.
+   * Ohne sie scheitert der Aufruf über den öffentlichen Hostnamen an Fehler 1042.
+   */
+  CAPI?: Fetcher;
+
   /** Messstream der GA4 Property, Form G-XXXXXXXXXX. */
   GA4_MEASUREMENT_ID: string;
   /** Wenn "true", geht der GA4-Sink auf den Debug-Endpunkt und liefert Validierungsmeldungen zurück. */

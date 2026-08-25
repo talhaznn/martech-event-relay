@@ -229,7 +229,7 @@ curl -X POST "$BASIS/replay" \
 ## Warum es so gebaut ist
 
 Der interessante Teil eines solchen Projekts sind nicht die Zeilen, sondern die Entscheidungen
-dahinter. Neun davon.
+dahinter. Zehn davon.
 
 ### 1. Ein Browser kann kein Geheimnis halten
 
@@ -306,7 +306,25 @@ dort sieht, hat vergessen zu hashen.
 Der Grund für die Härte: Klartext, der versehentlich an eine Werbeplattform geht, lässt sich nicht
 zurückholen. Ein abgelehnter Aufruf lässt sich reparieren.
 
-### 9. Null Laufzeitabhängigkeiten
+### 9. Ein Worker darf sich nicht selbst rufen
+
+Der Relay reicht das Ereignis an seinen eigenen Empfänger unter `/capi/events` weiter. Über den
+öffentlichen Hostnamen bricht Cloudflare das mit **Fehler 1042** ab, weil ein Worker sich nicht
+selbst über seine eigene Adresse aufrufen darf.
+
+Lokal fällt das nicht auf. `wrangler dev` hält alles in einem Prozess, dort funktioniert der
+Selbstaufruf klaglos. Aufgefallen ist es erst, weil der Ende-zu-Ende-Test auch gegen die
+veröffentlichte Fassung läuft und nicht nur gegen die lokale.
+
+Der vorgesehene Weg ist eine Service-Bindung. Der Aufruf läuft dann über die Plattform statt
+übers öffentliche Netz, bleibt aber ein echter Dienstaufruf mit Signatur, Prüfung und eigener
+Antwort. Ein extern eingestelltes `CAPI_ENDPOINT` geht weiterhin übers Netz.
+
+Das ist der Grund, warum in der Prüfliste weiter unten ein Punkt steht, der gegen die
+veröffentlichte Adresse testet und nicht gegen `localhost`. Ein grüner lokaler Testlauf sagt
+nichts darüber, ob es auch dort läuft, wo es laufen soll.
+
+### 10. Null Laufzeitabhängigkeiten
 
 Der Worker kommt ohne eine einzige Fremdbibliothek aus. Die Schemaprüfung ist handgeschrieben, die
 Kryptografie kommt aus der Web Crypto API, die im Worker und in Node identisch ist. Das hält die

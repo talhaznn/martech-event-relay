@@ -22,6 +22,20 @@ directory = "./public"
 [observability]
 enabled = true
 
+# Bindung des Workers an sich selbst.
+#
+# Der Relay reicht das Ereignis an seinen eigenen Empfänger unter /capi/events weiter.
+# Über den öffentlichen Hostnamen geht das nicht: Cloudflare bricht den Aufruf mit
+# Fehler 1042 ab, weil ein Worker sich nicht selbst über seine eigene Adresse rufen darf.
+# Lokal fällt das nicht auf, weil wrangler dev alles in einem Prozess hält.
+#
+# Der vorgesehene Weg ist eine Service-Bindung. Der Aufruf läuft dann über die Plattform
+# statt übers öffentliche Netz, bleibt aber ein echter Dienstaufruf mit Signatur, Prüfung
+# und eigener Antwort.
+[[services]]
+binding = "CAPI"
+service = "martech-event-relay"
+
 # Speicher für Deduplizierung, zwischengespeicherte Umschläge, Zähler und den Log-Ringpuffer.
 [[kv_namespaces]]
 binding = "RELAY"
